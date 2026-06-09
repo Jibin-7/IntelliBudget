@@ -8,7 +8,7 @@ from functools import wraps
 from bson import ObjectId
 import pandas as pd
 from pymongo import MongoClient
-from pgm_model import create_risk_model, predict_risk
+from backend.pgm_model import create_risk_model, predict_risk
 from forecasting_model import create_forecasting_model, predict_success_likelihood
 
 # --- App & DB Initialization ---
