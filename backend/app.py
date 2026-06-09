@@ -14,7 +14,7 @@ from forecasting_model import create_forecasting_model, predict_success_likeliho
 # --- App & DB Initialization ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'miniproject'
-MONGO_URI = 'mongodb+srv://jibin:miniproject@intellibudget.iiskf2h.mongodb.net/?retryWrites=true&w=majority&appName=IntelliBudget'
+MONGO_URI = 'mongodb+srv://jibinsjv_db_user:RGngmIAfGntE223J@intelli.5p7xhho.mongodb.net/?appName=Intelli'
 client = MongoClient(MONGO_URI)
 db = client.get_database('budget_planner_db')
 
@@ -388,68 +388,138 @@ def add_goal(current_user):
 def get_goals(current_user):
     try:
         goals = []
-        
-        # We fetch recent transactions to determine current saving habits
-        ninety_days_ago = datetime.utcnow() - timedelta(days=90)
+
+        # --- Use a more stable recent window (180 days). Fallback to all data if empty. ---
+        days_window = 180
+        window_start = datetime.utcnow() - timedelta(days=days_window)
         recent_transactions = list(db.transactions.find({
             'user_id': current_user['_id'],
-            'date': {'$gte': ninety_days_ago.strftime('%Y-%m-%d')}
+            'date': {'$gte': window_start.strftime('%Y-%m-%d')}
         }))
 
-        # If no recent transactions, we cannot make a meaningful prediction
+        # Fallback to full history if window returned nothing
+        if not recent_transactions:
+            recent_transactions = list(db.transactions.find({'user_id': current_user['_id']}))
+
+        # If still empty, return goals with "no data" hints
         if not recent_transactions:
             for goal in db.goals.find({'user_id': current_user['_id']}):
                 goal['_id'] = str(goal['_id'])
                 goal['user_id'] = str(goal['user_id'])
-                goal['advice'] = "Add recent income/expense entries to get a success prediction."
+                goal['advice'] = "Add income/expense entries to get a success prediction."
                 goal['likelihood'] = {'level': 'Unknown', 'percentage': 0}
+                goal['required_monthly_savings'] = None
+                goal['current_monthly_savings'] = 0
+                goal['months_remaining'] = None
                 goals.append(goal)
             return jsonify(goals)
 
-        # Use pandas to analyze recent habits
+        # Build DataFrame and normalize
         df = pd.DataFrame(recent_transactions)
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        
+
+        # Ensure a date column is present and parsed
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'])
+        else:
+            df['date'] = pd.to_datetime(df.get('created_at', pd.Series([datetime.utcnow()] * len(df))))
+
+        # Normalize type column values to lowercase for consistent filtering
+        if 'type' in df.columns:
+            df['type'] = df['type'].astype(str).str.lower()
+        else:
+            df['type'] = ''
+
+        # compute sums over the observed window
         total_income = df[df['type'] == 'income']['amount'].sum()
         total_expense = df[df['type'] == 'expense']['amount'].sum()
-        current_monthly_savings = (total_income - total_expense) / 3
 
-        monthly_expenses = df[df['type'] == 'expense']['amount'].resample('ME').sum()
-        volatility_level = 1 if not monthly_expenses.empty and monthly_expenses.std() > (monthly_expenses.mean() * 0.5) else 0
+        # compute observed months to derive monthly average robustly
+        observed_days = max(1, (df['date'].max() - df['date'].min()).days)
+        observed_months = max(1.0, observed_days / 30.44)
+        current_monthly_savings = (total_income - total_expense) / observed_months
 
-        # Loop through goals and predict success based on recent habits
+        # volatility: resample monthly and check std vs mean
+        try:
+            monthly_expenses = df[df['type'] == 'expense'].set_index('date')['amount'].resample('ME').sum()
+            volatility_level = 1 if (not monthly_expenses.empty and monthly_expenses.std() > (monthly_expenses.mean() * 0.5)) else 0
+        except Exception:
+            volatility_level = 0
+
+        # Loop through goals and compute required/current/likelihood/advice
         for goal in db.goals.find({'user_id': current_user['_id']}):
             goal['_id'] = str(goal['_id'])
             goal['user_id'] = str(goal['user_id'])
-            
-            target_date_str = goal.get('target_date')
-            if not target_date_str: continue
 
-            target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
-            months_remaining = max(0.5, (target_date - datetime.now()).days / 30.44)
-            required_monthly_savings = goal.get('goal_amount', 0) / months_remaining
-            
+            target_date_str = goal.get('target_date')
+            goal_amount = float(goal.get('goal_amount', 0) or 0)
+
+            # defaults (used if we can't compute)
+            goal['required_monthly_savings'] = None
+            goal['current_monthly_savings'] = current_monthly_savings
+            goal['likelihood'] = {'level': 'Unknown', 'percentage': 0.0}
+            goal['advice'] = "Unable to compute — check transactions / target date."
+            goal['months_remaining'] = None
+
+            if not target_date_str:
+                goal['advice'] = "No target date set."
+                goals.append(goal)
+                continue
+
+            # robustly parse target date
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+            except Exception:
+                goal['advice'] = "Invalid target date format."
+                goals.append(goal)
+                continue
+
+            days_remaining = (target_date - datetime.utcnow()).days
+
+            if days_remaining <= 0:
+                # target date passed or today -> don't force an extreme required rate
+                goal['required_monthly_savings'] = None
+                goal['likelihood'] = {'level': 'Unknown', 'percentage': 0.0}
+                goal['advice'] = "Target date has passed. Please update the target date."
+                goal['months_remaining'] = 0.0
+                goals.append(goal)
+                continue
+
+            # compute months remaining (fractional)
+            months_remaining = days_remaining / 30.44
+            required_monthly_savings = goal_amount / months_remaining if months_remaining > 0 else float('inf')
+
+            # surplus and classification (stricter thresholds)
             surplus = current_monthly_savings - required_monthly_savings
-            
-            if surplus < 0: surplus_level = 0
-            elif surplus < (required_monthly_savings * 0.5): surplus_level = 1
-            else: surplus_level = 2
+
+            if required_monthly_savings == 0:
+                surplus_level = 2  # goal already satisfied
+            else:
+                if surplus < -0.2 * required_monthly_savings:
+                    surplus_level = 0
+                elif surplus < 0.2 * required_monthly_savings:
+                    surplus_level = 1
+                else:
+                    surplus_level = 2
 
             likelihood = predict_success_likelihood(forecasting_model, surplus_level, volatility_level)
 
-            advice = "You are comfortably on track to achieve this goal!"
-            if surplus_level == 1: advice = "You're on track, but have a small buffer. Consistent saving is key."
-            elif surplus_level == 0:
+            if surplus_level == 0:
                 shortfall = abs(surplus)
                 advice = f"This goal is at risk. You need to save about ₹{shortfall:,.0f} more per month."
+            elif surplus_level == 1:
+                advice = "You're on track, but have a small buffer. Consistent saving is key."
+            else:
+                advice = "You are comfortably on track to achieve this goal!"
 
+            # Save computed values (including months_remaining)
             goal['required_monthly_savings'] = required_monthly_savings
             goal['current_monthly_savings'] = current_monthly_savings
             goal['likelihood'] = likelihood
             goal['advice'] = advice
+            goal['months_remaining'] = months_remaining
+
             goals.append(goal)
-            
+
         return jsonify(goals)
     except Exception as e:
         print(f"CRITICAL ERROR in /api/goals: {e}")
