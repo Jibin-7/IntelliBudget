@@ -6,3 +6,4 @@ pandas
 pgmpy
 PyJWT
 pymongo[srv]
+gunicorn
