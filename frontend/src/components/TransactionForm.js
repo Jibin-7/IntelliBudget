@@ -45,14 +45,14 @@ function TransactionForm({ onTransactionAdded, transactionToEdit, onUpdateCancel
 
         try {
             if (editingId) {
-                await axios.put(`http://127.0.0.1:5000/api/transactions/${editingId}`, transactionData, config);
+                await axios.put(`https://intellibudget.onrender.com/api/transactions/${editingId}`, transactionData, config);
                 alert('Transaction updated successfully!');
             } else {
-                await axios.post('http://127.0.0.1:5000/api/transactions', transactionData, config);
+                await axios.post('https://intellibudget.onrender.com/api/transactions', transactionData, config);
             }
             
             if (!editingId && type === 'expense') {
-                const anomalyRes = await axios.post('http://127.0.0.1:5000/api/check-anomaly', { amount: parseFloat(amount), category: category }, config);
+                const anomalyRes = await axios.post('https://intellibudget.onrender.com/api/check-anomaly', { amount: parseFloat(amount), category: category }, config);
                 if (anomalyRes.data.is_anomaly) {
                     setAnomalyWarning(anomalyRes.data.message);
                 } else {

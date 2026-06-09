@@ -26,7 +26,7 @@ function GroupDetailPage() {
             setLoading(true);
             try {
                 const config = { headers: { 'x-access-token': token } };
-                const res = await axios.get(`http://127.0.0.1:5000/api/groups/${groupId}`, config);
+                const res = await axios.get(`https://intellibudget.onrender.com/api/groups/${groupId}`, config);
                 setDetails(res.data);
                 setNewGroupName(res.data.group.name); // Pre-fill edit state
             } catch (error) {
@@ -48,8 +48,8 @@ function GroupDetailPage() {
         
         try {
             const config = { headers: { 'x-access-token': token } };
-            await axios.post(`http://127.0.0.1:5000/api/groups/${groupId}/expenses`, { description, amount: parseFloat(amount) }, config);
-            const res = await axios.get(`http://127.0.0.1:5000/api/groups/${groupId}`, config); // Re-fetch
+            await axios.post(`https://intellibudget.onrender.com/api/groups/${groupId}/expenses`, { description, amount: parseFloat(amount) }, config);
+            const res = await axios.get(`https://intellibudget.onrender.com/api/groups/${groupId}`, config); // Re-fetch
             setDetails(res.data);
             setDescription('');
             setAmount('');
@@ -63,9 +63,9 @@ function GroupDetailPage() {
         if (!inviteEmail) return alert("Please enter an email to invite.");
         try {
             const config = { headers: { 'x-access-token': token } };
-            const res = await axios.post(`http://127.0.0.1:5000/api/groups/${groupId}/members`, { email: inviteEmail }, config);
+            const res = await axios.post(`https://intellibudget.onrender.com/api/groups/${groupId}/members`, { email: inviteEmail }, config);
             alert(res.data.message);
-            const updatedDetails = await axios.get(`http://127.0.0.1:5000/api/groups/${groupId}`, config); // Re-fetch
+            const updatedDetails = await axios.get(`https://intellibudget.onrender.com/api/groups/${groupId}`, config); // Re-fetch
             setDetails(updatedDetails.data);
             setInviteEmail('');
         } catch (error) {
@@ -76,9 +76,9 @@ function GroupDetailPage() {
     const handleSaveName = async () => {
         try {
             const config = { headers: { 'x-access-token': token } };
-            await axios.put(`http://127.0.0.1:5000/api/groups/${groupId}`, { name: newGroupName }, config);
+            await axios.put(`https://intellibudget.onrender.com/api/groups/${groupId}`, { name: newGroupName }, config);
             setIsEditing(false);
-            const res = await axios.get(`http://127.0.0.1:5000/api/groups/${groupId}`, config); // Re-fetch
+            const res = await axios.get(`https://intellibudget.onrender.com/api/groups/${groupId}`, config); // Re-fetch
             setDetails(res.data);
         } catch (error) {
             alert(error.response?.data?.message || "Failed to update name.");
@@ -89,7 +89,7 @@ function GroupDetailPage() {
         if (window.confirm(`Are you sure you want to delete the group "${details.group.name}"? This is permanent.`)) {
             try {
                 const config = { headers: { 'x-access-token': token } };
-                await axios.delete(`http://127.0.0.1:5000/api/groups/${groupId}`, config);
+                await axios.delete(`https://intellibudget.onrender.com/api/groups/${groupId}`, config);
                 alert("Group deleted successfully.");
                 navigate('/groups');
             } catch (error) {

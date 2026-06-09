@@ -10,7 +10,7 @@ function SignupPage() {
     const handleSignup = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://127.0.0.1:5000/api/signup', { email, password });
+            await axios.post('https://intellibudget.onrender.com/api/signup', { email, password });
             alert('Signup successful! Please log in.');
             navigate('/login');
         } catch (error) {

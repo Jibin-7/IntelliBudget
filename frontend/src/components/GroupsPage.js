@@ -15,7 +15,7 @@ function GroupsPage() {
             setLoading(true);
             try {
                 const config = { headers: { 'x-access-token': token } };
-                const res = await axios.get('http://127.0.0.1:5000/api/groups', config);
+                const res = await axios.get('https://intellibudget.onrender.com/api/groups', config);
                 setGroups(res.data);
             } catch (error) {
                 console.error("Failed to fetch groups", error);
@@ -35,7 +35,7 @@ function GroupsPage() {
         
         try {
             const config = { headers: { 'x-access-token': token } };
-            const res = await axios.post('http://127.0.0.1:5000/api/groups', { name: groupName }, config);
+            const res = await axios.post('https://intellibudget.onrender.com/api/groups', { name: groupName }, config);
             navigate(`/groups/${res.data.group_id}`);
         } catch (error) {
             alert("Failed to create group.");
@@ -47,7 +47,7 @@ function GroupsPage() {
         if (window.confirm(`Are you sure you want to delete the group "${groupName}"? This will also delete all of its expenses.`)) {
             try {
                 const config = { headers: { 'x-access-token': token } };
-                await axios.delete(`http://127.0.0.1:5000/api/groups/${groupId}`, config);
+                await axios.delete(`https://intellibudget.onrender.com/api/groups/${groupId}`, config);
                 setGroups(currentGroups => currentGroups.filter(g => g._id !== groupId));
             } catch (error) {
                 alert(error.response?.data?.message || "Failed to delete group.");

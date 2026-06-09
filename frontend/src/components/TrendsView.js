@@ -22,14 +22,14 @@ function TrendsView() {
             
             try {
                 // Fetch insights (dynamic to the timeframe)
-                const insightsRes = await axios.get(`http://127.0.0.1:5000/api/insights?timeframe=${timeframe}`, config);
+                const insightsRes = await axios.get(`https://intellibudget.onrender.com/api/insights?timeframe=${timeframe}`, config);
                 setInsights(insightsRes.data);
 
                 // Fetch data for the selected chart type
                 let res;
                 switch (chartType) {
                     case 'bar':
-                        res = await axios.get(`http://127.0.0.1:5000/api/categorical_summary`, config);
+                        res = await axios.get(`https://intellibudget.onrender.com/api/categorical_summary`, config);
                         setChartData({
                             type: 'bar',
                             data: {
@@ -40,7 +40,7 @@ function TrendsView() {
                         break;
                     case 'stacked':
                         const trendsTimeframe = timeframe === 'daily' ? 'D' : timeframe === 'weekly' ? 'W-MON' : 'ME';
-                        res = await axios.get(`http://127.0.0.1:5000/api/trends?timeframe_rule=${trendsTimeframe}`, config);
+                        res = await axios.get(`https://intellibudget.onrender.com/api/trends?timeframe_rule=${trendsTimeframe}`, config);
                         setChartData({ type: 'stacked', data: res.data });
                         break;
                     default:

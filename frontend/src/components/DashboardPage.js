@@ -24,9 +24,9 @@ function DashboardPage() {
             const config = { headers: { 'x-access-token': token } };
             // Make API calls in parallel for faster loading
             const [summaryRes, transRes, riskRes] = await Promise.all([
-                axios.get('http://127.0.0.1:5000/api/summary', config),
-                axios.get('http://127.0.0.1:5000/api/transactions', config),
-                axios.get(`http://127.0.0.1:5000/api/risk?_=${new Date().getTime()}`, config)
+                axios.get('https://intellibudget.onrender.com/api/summary', config),
+                axios.get('https://intellibudget.onrender.com/api/transactions', config),
+                axios.get(`https://intellibudget.onrender.com/api/risk?_=${new Date().getTime()}`, config)
             ]);
 
             setSummary(summaryRes.data);
@@ -49,7 +49,7 @@ function DashboardPage() {
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this transaction?")) {
             try {
-                await axios.delete(`http://127.0.0.1:5000/api/transactions/${id}`, {
+                await axios.delete(`https://intellibudget.onrender.com/api/transactions/${id}`, {
                     headers: { 'x-access-token': token }
                 });
                 fetchDashboardData(); // Re-fetch all data

@@ -16,7 +16,7 @@ function GoalsPage() {
         setLoading(true);
         try {
             const config = { headers: { 'x-access-token': token } };
-            const res = await axios.get('http://127.0.0.1:5000/api/goals', config);
+            const res = await axios.get('https://intellibudget.onrender.com/api/goals', config);
             setGoals(res.data);
         } catch (error) {
             console.error("Failed to fetch goals", error);
@@ -69,7 +69,7 @@ function GoalsPage() {
 
         try {
             const config = { headers: { 'x-access-token': token } };
-            await axios.post('http://127.0.0.1:5000/api/goals', { name, goal_amount: goalAmount, target_date: targetDate }, config);
+            await axios.post('https://intellibudget.onrender.com/api/goals', { name, goal_amount: goalAmount, target_date: targetDate }, config);
             fetchGoals(); // Re-fetch goals after adding a new one
             setName('');
             setGoalAmount('');
@@ -84,7 +84,7 @@ function GoalsPage() {
         if (window.confirm("Are you sure you want to delete this goal?")) {
             try {
                 const config = { headers: { 'x-access-token': token } };
-                await axios.delete(`http://127.0.0.1:5000/api/goals/${goalId}`, config);
+                await axios.delete(`https://intellibudget.onrender.com/api/goals/${goalId}`, config);
                 fetchGoals(); // Re-fetch goals after deleting
             } catch (error) {
                 alert('Failed to delete goal.');

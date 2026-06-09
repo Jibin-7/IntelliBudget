@@ -16,7 +16,7 @@ function AnalysisPage() {
         const fetchAllTransactions = async () => {
             try {
                 const config = { headers: { 'x-access-token': token } };
-                const res = await axios.get('http://127.0.0.1:5000/api/transactions', config);
+                const res = await axios.get('https://intellibudget.onrender.com/api/transactions', config);
                 setTransactions(res.data);
             } catch (error) {
                 console.error("Failed to fetch transactions", error);
