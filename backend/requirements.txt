@@ -1,7 +1,9 @@
 Flask
-pymongo[srv]
-flask-cors
 flask-bcrypt
-PyJWT
-pgmpy
+flask-cors
+numpy
 pandas
+pgmpy
+PyJWT
+pymongo[srv]
+gunicorn
